@@ -109,7 +109,30 @@
                                 rotateTopOffset = (smallImgHeight - smallImgWidth) / 2; 
                                 zoomDivTop += rotateTopOffset;
                                 zoomDivLeft += rotateLeftOffset;
+                                var temp = smallImgWidth;
+                                smallImgWidth = smallImgHeight;
+                                smallImgHeight = smallImgWidth;
                             }
+                            // 避免越界
+                            // 横向左边界
+                            zoomDivLeft = zoomDivLeft < rotateLeftOffset
+                                ? rotateLeftOffset
+                                : zoomDivLeft;
+                            // 横向右边界，考虑旋转
+                            var rightMaxLeft = smallImgWidth - zoomWidth + rotateLeftOffset;
+                            zoomDivLeft = zoomDivLeft > rightMaxLeft
+                                ? rightMaxLeft
+                                : zoomDivLeft;
+                            // 纵向上边界
+                            // TODO: -5为zoomDiv和smallImg之间margin-top差值
+                            zoomDivTop = zoomDivTop < -smallImgHeight - 5 + rotateTopOffset
+                                ? -smallImgHeight - 5 + rotateTopOffset 
+                                : zoomDivTop; 
+                            // 纵向下边界
+                            zoomDivTop = zoomDivTop > -zoomHeight - 5 - rotateTopOffset
+                                ? -zoomHeight - 5 - rotateTopOffset
+                                : zoomDivTop;
+                            
                             // 放大镜中心是鼠标
                             curOptions.zoomDiv.show().css({
                                 // top: zoomDivTop,
@@ -122,7 +145,7 @@
                                 left: -zoomLeft * widthBase - (widthBase - 1) * zoomWidth / 2 - rotateLeftOffset * widthBase
                             });
                         });
-                        me.on('mouseleave', function (event) {
+                        me.on('mouseleave mouseout', function (event) {
                             curOptions.zoomDiv.hide();
                         });
                     }
@@ -160,8 +183,9 @@
                                 overflow: 'hidden',
                                 width: curOptions.zoomWidth + 'px',
                                 height: curOptions.zoomHeight + 'px',
-                                top: '-10000px',
-                                left: '-10000px'
+                                marginTop: '0px'
+                                // top: '-10000px',
+                                // left: '-10000px'
                             });
                         var zoomImg = $('<img>')
                             .attr({
