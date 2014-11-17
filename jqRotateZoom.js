@@ -14,6 +14,19 @@
  *      isToggle    // true: 高度和宽度基数互换，false: 不换
  *      rotateNum   // 旋转次数，顺时针: +1 逆时针: -1
  *      rotateSize  // 每次旋转度数，默认90
+ *      isExist     // 是否已存在，默认false
+ *      rotateZoomDiv // 最外层div
+ *      结构如下：
+ *          <div class="jq-rotate-zoom">
+ *              <img class="jq-zoom-small-img"/>
+ *              <div class="jq-zoom">
+ *                  <label class="loadingText">图片加载中...</label>
+ *                  <img class="jq-zoom-big-img"/>
+ *              </div>
+ *              <div class="jq-rotate-icon">
+ *                  
+ *              </div>
+ *          </div>
  * @dependencies
  *       1、jquery
  *       2、font-awesome  
@@ -22,15 +35,15 @@
  *     2、支持置顶旋转偏移量
  *     3、支持放大原图指定大小
  *     4、
- * @author hanrui01@baidu.com
- * @date 2014/03/21
+ * @author hanrui@baijiahulian.com
+ * @date 2014/11/12
  */
-// define(
-//     function(require) {
+define(
+    function(require) {
         // 插件的定义  
         $.fn.extend({
-            rotateZoom: function(options) {
-                var opts = $.extend({}, $.fn.rotateZoom.defaults, options);
+            jqrotatezoom: function(options) {
+                var opts = $.extend({}, $.fn.jqrotatezoom.defaults, options);
 
                 var util = {
                     /**
@@ -75,8 +88,8 @@
                      */
                     function main() {
                         init();
-                        render();
-                        addEvent();
+                        // render();
+                        // addEvent();
                     }
 
                     /**
@@ -139,11 +152,17 @@
                                 top: zoomDivTop,
                                 left: zoomDivLeft
                             });
-                            // 图片
-                            curOptions.zoomImg.css({
-                                top: -zoomTop * heightBase - (heightBase - 1) * zoomHeight / 2 - rotateTopOffset * heightBase,
-                                left: -zoomLeft * widthBase - (widthBase - 1) * zoomWidth / 2 - rotateLeftOffset * widthBase
-                            });
+
+                            if (curOptions.isLoadedBigImg) {
+                                // 图片
+                                curOptions.zoomDiv.children('.loadingText').hide();
+                                curOptions.zoomImg.css({
+                                    top: -zoomTop * heightBase - (heightBase - 1) * zoomHeight / 2 - rotateTopOffset * heightBase,
+                                    left: -zoomLeft * widthBase - (widthBase - 1) * zoomWidth / 2 - rotateLeftOffset * widthBase
+                                });
+                            } else {
+                                curOptions.zoomDiv.children('.loadingText').show();
+                            }
                         });
                         me.on('mouseleave mouseout', function (event) {
                             curOptions.zoomDiv.hide();
@@ -157,7 +176,26 @@
                     function init() {
                         curOptions.originSrc = me.attr('href');
                         curOptions.id = (new Date()).getTime();
-                        curOptions.smallImg =  me.children('img');
+                        if (me.children('.jq-rotate-zoom').length > 0) {
+                            curOptions.isExist = true;
+                            curOptions.rotateZoomDiv = me.children('.jq-rotate-zoom'); 
+                            curOptions.zoomDiv = curOptions.rotateZoomDiv.children('.jq-zoom'); 
+                            curOptions.zoomImg = curOptions.zoomDiv.children('img');
+                            curOptions.smallImg =  curOptions.rotateZoomDiv.children('.jq-zoom-small-img');
+                        } else {
+                            curOptions.smallImg =  me.children('img');
+                            curOptions.smallImg.addClass('jq-zoom-small-img');
+                        }
+                        if (curOptions.smallImg[0].complete) {
+                            render();
+                            addEvent();
+                        } else {
+                            curOptions.smallImg.on('load', function (event) {
+                                render();
+                                addEvent();
+                                curOptions.smallImg.off('load');
+                            });
+                        }
                     }
 
                     /**
@@ -165,38 +203,87 @@
                      */
                     function render() {
                         zoomRender();
-                        curOptions.zoomDiv = $('#zoom-div-' + curOptions.id); 
-                        curOptions.zoomImg = $('#zoom-img-' + curOptions.id);
+                        if (!curOptions.isExist) {
+                            curOptions.zoomDiv = $('#zoom-div-' + curOptions.id); 
+                            curOptions.zoomImg = $('#zoom-img-' + curOptions.id);
+                        }
                         widgetRender();
-                        curOptions.widthBase = curOptions.zoomImg.innerWidth() / curOptions.smallImg.innerWidth();
-                        curOptions.heightBase = curOptions.zoomImg.innerHeight() / curOptions.smallImg.innerHeight();
                     }
                     /**
                      * 生成放大窗口元素
                      */
                     function zoomRender() {
-                        var zoomDiv = $('<div>');
-                        zoomDiv.attr('id', 'zoom-div-' + curOptions.id)
+                        var zoomDiv;
+                        if (curOptions.isExist) {
+                            zoomDiv = curOptions.zoomDiv;
+                        } else {
+                            zoomDiv = $('<div>')
+                            .attr('id', 'zoom-div-' + curOptions.id)
+                            .addClass('jq-zoom')
                             .css({
                                 position: 'relative',
-                                border: '1px red solid',
+                                border: '1px #c9c9c9 solid',
                                 overflow: 'hidden',
-                                width: curOptions.zoomWidth + 'px',
-                                height: curOptions.zoomHeight + 'px',
-                                marginTop: '0px'
-                                // top: '-10000px',
-                                // left: '-10000px'
+                                top: '-10000px',
+                                left: '-10000px'
                             });
-                        var zoomImg = $('<img>')
+                        }
+                        zoomDiv.css({
+                            width: curOptions.zoomWidth + 'px',
+                            height: curOptions.zoomHeight + 'px'
+                        });
+                        var zoomImg;
+                        if (curOptions.isExist) {
+                            zoomImg = curOptions.zoomImg;
+                            zoomImg.attr('src', curOptions.originSrc);
+                        } else {
+                            zoomImg = $('<img>')
                             .attr({
                                 id: 'zoom-img-' + curOptions.id,
                                 src: curOptions.originSrc
                             })
                             .css({
                                 position: 'absolute'
-                            });
-                        zoomDiv.append(zoomImg);
-                        me.append(zoomDiv);
+                            })
+                            .addClass('jq-zoom-big-img');
+                            
+                            zoomDiv.append(zoomImg).append('<label class="loadingText" style="display:none;">图片加载中...</label>');
+                            me.append(zoomDiv);
+                        }
+                        zoomImg.on('load', function () {
+                            curOptions.isLoadedBigImg = true;
+                            // 考虑offsetHeight=0的场景，可能是dom没有加载成功，只是img已loaded
+                            var zoomImgWidth = curOptions.zoomImg.innerWidth() || curOptions.zoomImg[0].width;
+                            var zoomImgHeight = curOptions.zoomImg.innerHeight() || curOptions.zoomImg[0].height;
+                            curOptions.widthBase = zoomImgWidth / curOptions.smallImg.innerWidth();
+                            curOptions.heightBase = zoomImgHeight / curOptions.smallImg.innerHeight();
+                            zoomImg.off('load');
+                        });
+
+                        // 图片居中
+                        var div;
+                        if (curOptions.isExist) {
+                            div = curOptions.rotateZoomDiv;
+                        } else {
+                            me.parent().css('position', 'relative');
+                            div = $('<div>')
+                                .addClass('jq-rotate-zoom')
+                                .css({
+                                    // overflow: 'hidden',
+                                    margin: '0 auto',
+                                    position: 'absolute'
+                                });
+                            div.append(me.children());
+                            me.append(div);
+                        }
+                        var smallImgHeight = curOptions.smallImg.outerHeight();
+                        div.css({
+                            // overflow: 'hidden',
+                            height: smallImgHeight,
+                            width: curOptions.smallImg.outerWidth(),
+                            top: curOptions.parentNodeHeight / 2,
+                            marginTop: -smallImgHeight / 2
+                        });
                     }
 
                     /**
@@ -208,17 +295,32 @@
                      */
                     function widgetRender() {
                         var smallImgOffset = curOptions.smallImg.offset();
+                        var smallImgHeight = curOptions.smallImg.outerHeight();
+                        if (curOptions.isExist) {
+                            me.children('.jq-rotate-icon').css({
+                                top: curOptions.parentNodeHeight / 2 + smallImgHeight / 2 - 40,
+                                left: curOptions.parentNodeWidth / 2 - 40
+                            });
+                            return;
+                        }
+                        
                         var optDiv = $('<div>')
                             .css({
-                                width: '70px',
+                                width: '80px',
                                 margin: '0 auto',
                                 position: 'absolute',
-                                top: smallImgOffset.top + curOptions.smallImg.innerHeight() - 30,
-                                left: smallImgOffset.left + curOptions.smallImg.innerWidth() / 2 - 35,
-                            });
+                                top: curOptions.parentNodeHeight / 2 + smallImgHeight / 2 - 40,
+                                left: curOptions.parentNodeWidth / 2 - 40
+                            })
+                            .addClass('jq-rotate-icon');
                         // 左 逆时针
-                        // var rotateLeftIcon = $('<i class="fa fa-rotate-left"></i>')
-                        var rotateLeftIcon = $('<input type="button" value="左">')
+                        var rotateLeftIcon = $('<i class="fa fa-rotate-left"></i>')
+                        // var rotateLeftIcon = $('<input type="button" value="左转">')
+                            .css({
+                                fontSize: '2em',
+                                color: '#fff',
+                                textShadow: '1px 1px 1px #474747'
+                            })
                             .on('mousemove', function (event) {
                                 util.stopPropagation(event);
                             })
@@ -229,18 +331,26 @@
                                 util.stopPropagation(event);
                             });
                         // 右 顺时针
-                        // var rotateRightIcon = $('<i class="fa fa-rotate-right"></i>')
-                        var rotateRightIcon = $('<input type="button" value="右">')
+                        var rotateRightIcon = $('<i class="fa fa-rotate-right"></i>')
+                        // var rotateRightIcon = $('<input type="button" value="右转">')
+                            .css({
+                                marginLeft: '6px',
+                                fontSize: '2em',
+                                color: '#fff',
+                                textShadow: '1px 1px 1px #474747'
+                            })
                             .on('mousemove', function (event) {
                                 util.stopPropagation(event);
                             })
                             .on('click', function () {
                                 curOptions.rotateNum += 1;
                                 rotateImg();
+                                util.preventDefault(event);
                                 util.stopPropagation(event);
                             });
                         optDiv.append(rotateLeftIcon).append(rotateRightIcon);
-                        $(document.body).append(optDiv);
+                        // $(document.body).append(optDiv);
+                        me.append(optDiv);
                     }
 
                     /**
@@ -271,13 +381,18 @@
         });
 
         // 插件的defaults
-        $.fn.rotateZoom.defaults = {
+        $.fn.jqrotatezoom.defaults = {
             // 放大窗口宽度
             zoomWidth: 80,
             // 放大窗口高度
             zoomHeight: 50,
             // 每次旋转度数
-            rotateSize: 90
+            rotateSize: 90,
+            // TODO: 去掉下面两个属性
+            // 父节点高度，做图片居中处理
+            parentNodeHeight: 358,
+            // 父节点宽度，做图片居中处理
+            parentNodeWidth: 358
         };
-//     }
-// );
+    }
+);
