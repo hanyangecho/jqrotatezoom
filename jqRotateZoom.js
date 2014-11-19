@@ -12,6 +12,7 @@
  *      widthBase   // 宽度基数
  *      heightBase  // 高度基数
  *      isToggle    // true: 高度和宽度基数互换，false: 不换
+ *      isToggleReverse  // true:纵向反转，false: 不反转
  *      rotateNum   // 旋转次数，顺时针: +1 逆时针: -1
  *      rotateSize  // 每次旋转度数，默认90
  *      isExist     // 是否已存在，默认false
@@ -77,7 +78,8 @@ define(
                         {}, opts, 
                         { 
                             isToggle: false,
-                            rotateNum: 0
+                            rotateNum: 0,
+                            isToggleReverse: false
                         }
                     );
                     main();
@@ -88,6 +90,8 @@ define(
                      */
                     function main() {
                         init();
+                        // curOptions.rotateNum = 0;
+                        rotate(curOptions.smallImg);
                         // render();
                         // addEvent();
                     }
@@ -138,12 +142,12 @@ define(
                                 : zoomDivLeft;
                             // 纵向上边界
                             // TODO: -5为zoomDiv和smallImg之间margin-top差值
-                            zoomDivTop = zoomDivTop < -smallImgHeight - 5 + rotateTopOffset
-                                ? -smallImgHeight - 5 + rotateTopOffset 
+                            zoomDivTop = zoomDivTop < -smallImgHeight + rotateTopOffset
+                                ? -smallImgHeight + rotateTopOffset 
                                 : zoomDivTop; 
                             // 纵向下边界
-                            zoomDivTop = zoomDivTop > -zoomHeight - 5 - rotateTopOffset
-                                ? -zoomHeight - 5 - rotateTopOffset
+                            zoomDivTop = zoomDivTop > -zoomHeight - rotateTopOffset
+                                ? -zoomHeight - rotateTopOffset
                                 : zoomDivTop;
                             
                             // 放大镜中心是鼠标
@@ -282,8 +286,22 @@ define(
                             height: smallImgHeight,
                             width: curOptions.smallImg.outerWidth(),
                             top: curOptions.parentNodeHeight / 2,
-                            marginTop: -smallImgHeight / 2
+                            marginTop: -smallImgHeight / 2,
+                            left: curOptions.parentNodeWidth / 2,
+                            marginLeft: - curOptions.smallImg.outerWidth() / 2
                         });
+                    }
+
+                    // 向左旋转
+                    function rotateLeft(event) {
+                        curOptions.rotateNum -= 1;
+                        rotateImg();
+                    }
+
+                    // 向右旋转
+                    function rotateRight(event) {
+                        curOptions.rotateNum += 1;
+                        rotateImg();
                     }
 
                     /**
@@ -296,26 +314,32 @@ define(
                     function widgetRender() {
                         var smallImgOffset = curOptions.smallImg.offset();
                         var smallImgHeight = curOptions.smallImg.outerHeight();
+                        var optDiv;
                         if (curOptions.isExist) {
-                            me.children('.jq-rotate-icon').css({
-                                top: curOptions.parentNodeHeight / 2 + smallImgHeight / 2 - 40,
+                            optDiv = me.children('.jq-rotate-icon');
+                            optDiv.css({
+                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 + 10,
                                 left: curOptions.parentNodeWidth / 2 - 40
                             });
+                            optDiv.children('.jq-rotate-left-btn').off('click').on('click', rotateLeft);
+                            optDiv.children('.jq-rotate-right-btn').off('click').on('click', rotateRight);
+                            optDiv.children('.jq-rotate-y-btn').off('click').on('click', rotateYImg);
                             return;
                         }
                         
-                        var optDiv = $('<div>')
+                        optDiv = $('<div>')
                             .css({
-                                width: '80px',
+                                width: '90px',
                                 margin: '0 auto',
                                 position: 'absolute',
-                                top: curOptions.parentNodeHeight / 2 + smallImgHeight / 2 - 40,
+                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 + 10,
                                 left: curOptions.parentNodeWidth / 2 - 40
                             })
                             .addClass('jq-rotate-icon');
                         // 左 逆时针
                         var rotateLeftIcon = $('<i class="fa fa-rotate-left"></i>')
                         // var rotateLeftIcon = $('<input type="button" value="左转">')
+                            .addClass('jq-rotate-left-btn')
                             .css({
                                 fontSize: '2em',
                                 color: '#fff',
@@ -324,15 +348,11 @@ define(
                             .on('mousemove', function (event) {
                                 util.stopPropagation(event);
                             })
-                            .on('click', function (event) {
-                                curOptions.rotateNum -= 1;
-                                rotateImg();
-                                util.preventDefault(event);
-                                util.stopPropagation(event);
-                            });
+                            .on('click', rotateLeft);
                         // 右 顺时针
                         var rotateRightIcon = $('<i class="fa fa-rotate-right"></i>')
                         // var rotateRightIcon = $('<input type="button" value="右转">')
+                            .addClass('jq-rotate-right-btn')
                             .css({
                                 marginLeft: '6px',
                                 fontSize: '2em',
@@ -342,14 +362,22 @@ define(
                             .on('mousemove', function (event) {
                                 util.stopPropagation(event);
                             })
-                            .on('click', function () {
-                                curOptions.rotateNum += 1;
-                                rotateImg();
-                                util.preventDefault(event);
+                            .on('click', rotateRight);
+                        // 纵向反转
+                        var rotateYIcon = $('<i class="fa fa-exchange"></i>')
+                        // var rotateRightIcon = $('<input type="button" value="右转">')
+                            .addClass('jq-rotate-y-btn')
+                            .css({
+                                marginLeft: '6px',
+                                fontSize: '2em',
+                                color: '#fff',
+                                textShadow: '1px 1px 1px #474747'
+                            })
+                            .on('mousemove', function (event) {
                                 util.stopPropagation(event);
-                            });
-                        optDiv.append(rotateLeftIcon).append(rotateRightIcon);
-                        // $(document.body).append(optDiv);
+                            })
+                            .on('click', rotateYImg);
+                        optDiv.append(rotateLeftIcon).append(rotateRightIcon).append(rotateYIcon);
                         me.append(optDiv);
                     }
 
@@ -360,7 +388,21 @@ define(
                         curOptions.isToggle = !curOptions.isToggle;
                         rotate(curOptions.smallImg);
                         rotate(curOptions.zoomImg);
+                        util.preventDefault(event);
+                        util.stopPropagation(event);
                     }
+
+                    /**
+                     * 纵向反转图片
+                     */
+                    function rotateYImg() {
+                        curOptions.isToggleReverse = !curOptions.isToggleReverse;
+                        rotateY(curOptions.smallImg);
+                        rotateY(curOptions.zoomImg);
+                        util.preventDefault(event);
+                        util.stopPropagation(event);
+                    }
+
 
                     /**
                      * 旋转
@@ -374,6 +416,35 @@ define(
                             '-moz-transform': 'rotate(' + count + 'deg)', /* Firefox */
                             '-webkit-transform': 'rotate(' + count + 'deg)', /* Safari and Chrome */
                             '-o-transform': 'rotate(' + count + 'deg)' /* Opera */
+                        });
+                    }
+
+                    /**
+                     * 旋转
+                     * @param  {Object} source dom对象
+                     */
+                    function rotateY(source) {
+                        var count = curOptions.isToggleReverse ? 180 : 0;
+                        source.css({
+                            transform: 'rotateY(' + count + 'deg)',
+                            '-ms-transform': 'rotateY(' + count + 'deg)', /* IE 9 */
+                            '-moz-transform': 'rotateY(' + count + 'deg)', /* Firefox */
+                            '-webkit-transform': 'rotateY(' + count + 'deg)', /* Safari and Chrome */
+                            '-o-transform': 'rotateY(' + count + 'deg)' /* Opera */
+                        });
+                    }
+
+                    /**
+                     * 初始化图片，去掉旋转
+                     * @param  {Object} source dom对象
+                     */
+                    function initRotate(source) {
+                        source.css({
+                            transform: 'rotate(0deg)',
+                            '-ms-transform': 'rotate(0deg)', /* IE 9 */
+                            '-moz-transform': 'rotate(0deg)', /* Firefox */
+                            '-webkit-transform': 'rotate(0deg)', /* Safari and Chrome */
+                            '-o-transform': 'rotate(0deg)' /* Opera */
                         });
                     }
                 });
