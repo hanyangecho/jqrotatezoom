@@ -101,17 +101,18 @@ define(
                      */
                     function addEvent() {
                         // 鼠标滑过小图
+                        me.off('mousemove');
                         me.bind('mousemove', function (event) {
                             var sourceEvent = window.event || event;
                             var smallImgOffset = curOptions.smallImg.offset();
                             var zoomHeight = curOptions.zoomHeight;
                             var zoomWidth = curOptions.zoomWidth;
-                            var zoomTop = sourceEvent.clientY - smallImgOffset.top - zoomHeight / 2;
-                            var zoomLeft = sourceEvent.clientX - smallImgOffset.left - zoomWidth / 2;
+                            var zoomTop = sourceEvent.clientY + document.body.scrollTop - smallImgOffset.top - zoomHeight / 2;
+                            var zoomLeft = sourceEvent.clientX + document.body.scrollLeft - smallImgOffset.left - zoomWidth / 2;
                             var smallImgHeight = curOptions.smallImg.innerHeight();
                             var smallImgWidth = curOptions.smallImg.innerWidth();
                             // 放大镜位置
-                            var zoomDivTop = sourceEvent.clientY - smallImgOffset.top - smallImgHeight - zoomHeight / 2;
+                            var zoomDivTop = sourceEvent.clientY + document.body.scrollTop - smallImgOffset.top - smallImgHeight - zoomHeight / 2;
                             var zoomDivLeft = zoomLeft;
                             // 基数
                             var heightBase = (curOptions.isToggle ? curOptions.widthBase : curOptions.heightBase);
@@ -159,12 +160,14 @@ define(
 
                             if (curOptions.isLoadedBigImg) {
                                 // 图片
+                                curOptions.zoomImg.show();
                                 curOptions.zoomDiv.children('.loadingText').hide();
                                 curOptions.zoomImg.css({
                                     top: -zoomTop * heightBase - (heightBase - 1) * zoomHeight / 2 - rotateTopOffset * heightBase,
                                     left: -zoomLeft * widthBase - (widthBase - 1) * zoomWidth / 2 - rotateLeftOffset * widthBase
                                 });
                             } else {
+                                curOptions.zoomImg.hide();
                                 curOptions.zoomDiv.children('.loadingText').show();
                             }
                         });
@@ -179,7 +182,6 @@ define(
                      */
                     function init() {
                         curOptions.originSrc = me.attr('href');
-                        curOptions.id = (new Date()).getTime();
                         if (me.children('.jq-rotate-zoom').length > 0) {
                             curOptions.isExist = true;
                             curOptions.rotateZoomDiv = me.children('.jq-rotate-zoom'); 
@@ -194,6 +196,7 @@ define(
                             render();
                             addEvent();
                         } else {
+                            curOptions.smallImg.off('load');
                             curOptions.smallImg.on('load', function (event) {
                                 render();
                                 addEvent();
@@ -208,8 +211,9 @@ define(
                     function render() {
                         zoomRender();
                         if (!curOptions.isExist) {
-                            curOptions.zoomDiv = $('#zoom-div-' + curOptions.id); 
-                            curOptions.zoomImg = $('#zoom-img-' + curOptions.id);
+                            curOptions.rotateZoomDiv = me.children('.jq-rotate-zoom'); 
+                            curOptions.zoomDiv = curOptions.rotateZoomDiv.children('.jq-zoom'); 
+                            curOptions.zoomImg = curOptions.zoomDiv.children('img');
                         }
                         widgetRender();
                     }
@@ -222,17 +226,18 @@ define(
                             zoomDiv = curOptions.zoomDiv;
                         } else {
                             zoomDiv = $('<div>')
-                            .attr('id', 'zoom-div-' + curOptions.id)
                             .addClass('jq-zoom')
                             .css({
                                 position: 'relative',
                                 border: '1px #c9c9c9 solid',
                                 overflow: 'hidden',
                                 top: '-10000px',
-                                left: '-10000px'
+                                left: '-10000px',
+                                textAlign: 'center'
                             });
                         }
                         zoomDiv.css({
+                            lineHeight: curOptions.zoomHeight + 'px',
                             width: curOptions.zoomWidth + 'px',
                             height: curOptions.zoomHeight + 'px'
                         });
@@ -243,7 +248,6 @@ define(
                         } else {
                             zoomImg = $('<img>')
                             .attr({
-                                id: 'zoom-img-' + curOptions.id,
                                 src: curOptions.originSrc
                             })
                             .css({
@@ -254,6 +258,7 @@ define(
                             zoomDiv.append(zoomImg).append('<label class="loadingText" style="display:none;">图片加载中...</label>');
                             me.append(zoomDiv);
                         }
+                        zoomImg.off('load');
                         zoomImg.on('load', function () {
                             curOptions.isLoadedBigImg = true;
                             // 考虑offsetHeight=0的场景，可能是dom没有加载成功，只是img已loaded
@@ -318,7 +323,7 @@ define(
                         if (curOptions.isExist) {
                             optDiv = me.children('.jq-rotate-icon');
                             optDiv.css({
-                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 + 10,
+                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 - 30,
                                 left: curOptions.parentNodeWidth / 2 - 40
                             });
                             optDiv.children('.jq-rotate-left-btn').off('click').on('click', rotateLeft);
@@ -332,7 +337,7 @@ define(
                                 width: '90px',
                                 margin: '0 auto',
                                 position: 'absolute',
-                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 + 10,
+                                top: curOptions.parentNodeHeight / 2 - smallImgHeight / 2 - 30,
                                 left: curOptions.parentNodeWidth / 2 - 40
                             })
                             .addClass('jq-rotate-icon');
